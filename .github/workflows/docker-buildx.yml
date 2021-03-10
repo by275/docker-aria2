@@ -46,7 +46,7 @@ jobs:
           echo ::set-output name=github_desc::$(curl -sX GET https://api.github.com/repos/${GITHUB_REPOSITORY} | jq -r .description)
           echo ::set-output name=github_branch::${GITHUB_REF#refs/heads/}
       - 
-        name: Buildx for PR
+        name: Buildx for PR (dockerhub)
         if: github.event_name == 'pull_request'
         uses: ilteoood/docker_buildx@1.1.0
         with:
@@ -57,6 +57,19 @@ jobs:
           platform: linux/amd64,linux/arm/v7,linux/arm64
           dockerUser: ${{ env.DOCKERHUB_USER }}
           dockerPassword: ${{ secrets.DOCKERHUB_PASS }}
+      - 
+        name: Buildx for PR (ghcr.io)
+        if: github.event_name == 'pull_request'
+        uses: ilteoood/docker_buildx@1.1.0
+        with:
+          imageName: ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}
+          tag: testing,testing-pr-${{ github.event.pull_request.number }}
+          dockerFile: Dockerfile
+          publish: true
+          platform: linux/amd64,linux/arm/v7,linux/arm64
+          dockerUser: ${{ github.repository_owner }}
+          dockerPassword: ${{ secrets.GHCR_PAT }}
+          dockerServer: ghcr.io
       -
         name: Notification for PR
         uses: sarisia/actions-status-discord@v1
@@ -70,7 +83,7 @@ jobs:
               - testing
               - testing-pr-${{ github.event.pull_request.number }}
       - 
-        name: Buildx
+        name: BuildxR (dockerhub)
         if: (github.event_name != 'pull_request')
         uses: ilteoood/docker_buildx@1.1.0
         with:
@@ -81,6 +94,19 @@ jobs:
           platform: linux/amd64,linux/arm/v7,linux/arm64
           dockerUser: ${{ env.DOCKERHUB_USER }}
           dockerPassword: ${{ secrets.DOCKERHUB_PASS }}
+      - 
+        name: Buildx (ghcr.io)
+        if: (github.event_name != 'pull_request')
+        uses: ilteoood/docker_buildx@1.1.0
+        with:
+          imageName: ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}
+          tag: latest,${{ steps.vars.outputs.app_ver }}
+          dockerFile: Dockerfile
+          publish: true
+          platform: linux/amd64,linux/arm/v7,linux/arm64
+          dockerUser: ${{ github.repository_owner }}
+          dockerPassword: ${{ secrets.GHCR_PAT }}
+          dockerServer: ghcr.io
       -
         name: Update Dockerhub description
         if: (github.event_name != 'pull_request')
