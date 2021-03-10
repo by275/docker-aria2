@@ -1,7 +1,11 @@
 name: docker-buildx
 
 on:
-  pull_request:
+  watch:
+    types: [started]
+  push:
+    branches:
+      - 'master'
 
 env:
   DOCKERHUB_USER: wiserain
@@ -64,21 +68,28 @@ jobs:
           context: .
           file: Dockerfile
           tags: |
-            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing
-            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing-pr-${{ github.event.pull_request.number }}
-            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing
-            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing-pr-${{ github.event.pull_request.number }}
+            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:latest
+            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:${{ steps.vars.outputs.app_ver }}
+            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:latest
+            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:${{ steps.vars.outputs.app_ver }}
           platform: linux/amd64,linux/arm/v7,linux/arm64
           push: true
       -
+        name: Update Dockerhub description
+        uses: peter-evans/dockerhub-description@v2
+        with:
+          username: ${{ env.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+          repository: ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}
+          short-description: ${{ steps.vars.outputs.github_desc }}
+      -
         name: Notification
         uses: sarisia/actions-status-discord@v1
-        if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: ${{ job.status }}
           description: |
-            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing
-            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing-pr-${{ github.event.pull_request.number }}
-            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing
-            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:testing-pr-${{ github.event.pull_request.number }}
+            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:latest
+            ${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:${{ steps.vars.outputs.app_ver }}
+            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:latest
+            ghcr.io/${{ env.DOCKERHUB_USER }}/${{ env.DOCKERHUB_REPO }}:${{ steps.vars.outputs.app_ver }}
